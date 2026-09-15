@@ -1,0 +1,73 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    A reference consumer of MeddlingIdiot.Greenlight.Sdk: the desktop wallpaper. Green while
+    everything passes, amber while a pull request wants you, red when a pipeline breaks, and a
+    monochrome grey one when there is no Greenlight on the machine to ask.
+
+    Four pictures and no more. Greenlight also says whether a build is running, and this client
+    deliberately ignores it - the other clients draw a small thing in a corner and can afford to
+    animate it, but a wallpaper that changed every time somebody pushed would be a strobe.
+
+    The point of it is what it does NOT have. No Azure DevOps client, no GitHub client, no
+    token, no polling loop - it reads everything from the Greenlight already running on the
+    machine, through the package. Everything here is either the tray icon, the one Win32 call
+    that hangs a picture, or the twenty-odd lines that talk to the SDK.
+
+    It references the SDK as a package, which is all an app of your own has to do:
+      dotnet add package MeddlingIdiot.Greenlight.Sdk
+
+    net10.0-windows because hanging a wallpaper is SystemParametersInfo and two registry values.
+    The SDK itself is plain net8.0/net10.0.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Greenlight.WallpaperClient</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\MeddlingIdiot.ico</ApplicationIcon>
+    <!-- Not a package. Fallout's Package target packs the whole solution. -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
+  </ItemGroup>
+
+  <!-- The SDK and the updater, the same way your own app would take them. -->
+  <ItemGroup>
+    <PackageReference Include="MeddlingIdiot.Greenlight.Sdk" Version="1.2.0" />
+    <PackageReference Include="MeddlingIdiot.Velopack" Version="1.2.0" />
+  </ItemGroup>
+
+  <!-- The mascot, for the tray icon and the executable. Same icon the other apps use. -->
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\MeddlingIdiot.ico" />
+  </ItemGroup>
+
+  <!--
+    The four wallpapers, unpacked to AppData on first run: Windows hangs a wallpaper from a path
+    on disk, not from a stream, and a path inside the install folder would not survive an update.
+
+    Plain embedded resources rather than AvaloniaResource, because Avalonia never draws them -
+    they are files on their way to a disk. Going through avares: would mean they could only be
+    read after the framework was up, which makes them untestable and makes the order of things
+    at startup load bearing for no reason.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\Wallpapers\*.png" LogicalName="Wallpapers.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!--
+    For WallpaperNative.Spell, which is the two registry strings Windows spells a layout across.
+    Getting "10" and "6" the wrong way round is a picture that is letterboxed instead of filled -
+    entirely silent, and invisible on any screen the same shape as the picture.
+  -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Greenlight.WallpaperClient.UnitTests" />
+  </ItemGroup>
+</Project>
